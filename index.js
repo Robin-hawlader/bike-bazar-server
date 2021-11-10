@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors');
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
+const ObjectId = require('mongodb').ObjectId;
 const port = process.env.PORT || 5000;
 
 
@@ -18,14 +19,63 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 async function run() {
     try {
         await client.connect();
-        const databse = client.db('modernBikes');
-        const bikesCollection = databse.collection('bikes');
+        const database = client.db('modernBikes');
+        const bikesCollection = database.collection('bikes');
+        const reviewCollection = database.collection('review')
+        const usersCollection = database.collection('users')
 
 
         app.get('/bikes', async (req, res) => {
             const cursor = bikesCollection.find({});
             const result = await cursor.toArray();
             res.send(result);
+        });
+        app.get('/bikes/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await bikesCollection.findOne(query)
+            res.json(result);
+        });
+        app.post('/reviews', async (req, res) => {
+            const reviewItem = req.body;
+            const result = await reviewCollection.insertOne(reviewItem);
+            res.json(result);
+        })
+        app.get('/reviews', async (req, res) => {
+            const cursor = reviewCollection.find({})
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email };
+            const user = await usersCollection.findOne(query);
+            let isAdmin = false;
+            if (user?.role === 'admin') {
+                isAdmin = true;
+            }
+            res.json({ admin: isAdmin });
+        })
+        app.post('/users', async (req, res) => {
+            const user = req.body;
+            const result = await usersCollection.insertOne(user);
+            console.log(result)
+            res.json(result);
+        })
+        app.put('/users', async (req, res) => {
+            const user = req.body;
+            const filter = { email: user.email };
+            const options = { upsert: true };
+            const updateDoc = { $set: user };
+            const result = await usersCollection.updateOne(filter, updateDoc, options);
+            res.json(result)
+        })
+        app.put('/users/admin', async (req, res) => {
+            const user = req.body;
+            const filter = { email: user.email };
+            const updateDoc = { $set: { role: 'admin' } };
+            const result = await usersCollection.updateOne(filter, updateDoc);
+            res.json(result);
         })
     }
     finally {
