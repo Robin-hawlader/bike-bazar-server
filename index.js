@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
 const ObjectId = require('mongodb').ObjectId;
+const { query } = require('express');
 const port = process.env.PORT || 5000;
 
 
@@ -23,6 +24,67 @@ async function run() {
         const bikesCollection = database.collection('bikes');
         const reviewCollection = database.collection('review')
         const usersCollection = database.collection('users')
+        const orderCollection = database.collection('orders')
+        const uploadCollection = database.collection('upload')
+
+
+        // orders start
+        app.post('/orders', async (req, res) => {
+            const orders = req.body;
+            const result = await orderCollection.insertOne(orders);
+            res.json(result);
+        })
+        app.get('/orders', async (req, res) => {
+            const email = req.query.email;
+            const filter = { email: email };
+            const result = await orderCollection.find(filter);
+            const orders = await result.toArray()
+            res.json(orders);
+        })
+        app.get('/allorders', async (req, res) => {
+            const cursor = orderCollection.find({});
+            const order = await cursor.toArray();
+            res.send(order);
+        })
+        app.delete('/orders/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) };
+            const result = await orderCollection.deleteOne(query);
+            res.send(result);
+        })
+        //orders end
+
+        app.post('/upload', async (req, res) => {
+            const orders = req.body;
+            const result = await uploadCollection.insertOne(orders);
+            res.json(result);
+        })
+        app.get('/upload/', async (req, res) => {
+            const cursor = uploadCollection.find({});
+            const result = await cursor.toArray();
+            res.send(result);
+        })
+        app.get('/upload/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: ObjectId(id) }
+            const result = await uploadCollection.findOne(query)
+            res.json(result);
+        });
+
+
+        app.post('/reviews', async (req, res) => {
+            const review = req.body;
+            const result = await reviewCollection.insertOne(review);
+            res.json(result);
+        })
+
+        app.get('/reviews', async (req, res) => {
+            const cursor = reviewCollection.find({});
+            const reviews = await cursor.toArray();
+            res.send(reviews);
+        })
+
+
 
 
         app.get('/bikes', async (req, res) => {
@@ -36,11 +98,6 @@ async function run() {
             const result = await bikesCollection.findOne(query)
             res.json(result);
         });
-        app.post('/reviews', async (req, res) => {
-            const reviewItem = req.body;
-            const result = await reviewCollection.insertOne(reviewItem);
-            res.json(result);
-        })
         app.get('/reviews', async (req, res) => {
             const cursor = reviewCollection.find({})
             const result = await cursor.toArray();
